@@ -1,0 +1,36 @@
+# {{PROJECT_NAME}}
+
+{{PROJECT_DESCRIPTION}}
+
+## Development
+
+This project uses **Pragmatic Spec-Driven Development**. See [`CLAUDE.md`](./CLAUDE.md) for the philosophy and [`SPEC_PIPELINE.md`](./SPEC_PIPELINE.md) for the process.
+
+## Quickstart
+
+<!-- TODO: add stack-specific install/run instructions -->
+
+```bash
+# Install dependencies
+# Run dev server
+# Run tests
+```
+
+## Documentation structure
+
+- [`CLAUDE.md`](./CLAUDE.md) — project-level conventions for AI-assisted development
+- [`SPEC_PIPELINE.md`](./SPEC_PIPELINE.md) — SDD process (when to use FULL/FAST/SHORT-CIRCUIT)
+- [`specs/features/`](./specs/features/) — versioned feature specs
+- [`docs/adr/`](./docs/adr/) — architecture decision records
+- [`docs/runbooks/`](./docs/runbooks/) — operational playbooks
+- [`TASKS.md`](./TASKS.md) — task tracking dashboard
+
+## Contributing
+
+Before opening a PR:
+1. If your change is non-trivial, write a spec in `specs/features/<area>/<slug>.spec.md`
+2. Update tests as per Selective TDD (see CLAUDE.md)
+3. Run linter and tests locally
+4. Verify CI passes before requesting review
+
+Scaffolded by [`claude-sdd`](https://github.com/MigueMercedes/claude-sdd).

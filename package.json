@@ -1,0 +1,49 @@
+{
+  "name": "claude-sdd",
+  "version": "0.1.1",
+  "description": "Pragmatic Spec-Driven Development framework for Claude Code — npm CLI that scaffolds the full SDD pipeline (specs, prompts, skill, ADR/runbook conventions) into any project",
+  "type": "module",
+  "bin": {
+    "claude-sdd": "./bin/cli.js"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "templates/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "sdd",
+    "spec-driven-development",
+    "scaffolding",
+    "ai-coding"
+  ],
+  "author": "Miguel Mercedes <lmyguel0324@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MigueMercedes/claude-sdd.git"
+  },
+  "homepage": "https://github.com/MigueMercedes/claude-sdd#readme",
+  "bugs": {
+    "url": "https://github.com/MigueMercedes/claude-sdd/issues"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "kleur": "^4.1.5",
+    "prompts": "^2.4.2"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
+  }
+}

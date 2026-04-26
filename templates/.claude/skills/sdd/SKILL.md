@@ -1,0 +1,213 @@
+---
+name: sdd
+description: Pragmatic Spec-Driven Development pipeline. Invoke ALWAYS when receiving a task that touches code in this project before planning or implementing. Decides mode (FULL/FAST/SHORT-CIRCUIT) based on heuristics, loads the project SDD context, and directs to the corresponding pipeline. First invocation in a project also customizes the scaffolded CLAUDE.md template based on the actual codebase.
+---
+
+# Pragmatic SDD
+
+This skill is the entry point of the SDD flow. Invoke it when starting any non-trivial task. It guides you to decide the mode of work, what docs to read, and when to write specs vs when not.
+
+## When to invoke
+
+- The user asks for any change to code (feature, bug, refactor, fix)
+- Before touching files in the project
+- Before invoking `superpowers:writing-plans` or `feature-dev:feature-dev` (this skill decides mode, those do the work)
+- When a new session starts and you are not sure what process to follow
+
+**Do NOT invoke** for pure conversational queries (questions about the codebase, "what does X do", "where does Y live"). For those use `Read`/`Bash` directly.
+
+---
+
+## First-time setup (if CLAUDE.md still has placeholders)
+
+If the project's `CLAUDE.md` has unresolved `{{PLACEHOLDERS}}` (recently scaffolded by `claude-sdd`), the FIRST thing to do is customize it:
+
+1. **Read the codebase** to detect:
+   - Primary language(s) and framework(s) (look for `package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`, etc.)
+   - Repo layout (monorepo, single-repo, multi-repo with submodules)
+   - Test framework (look for `vitest.config`, `pytest.ini`, `jest.config`, etc.)
+   - Linter / formatter
+   - Deploy target (look for `Dockerfile`, `vercel.json`, `railway.toml`, `.github/workflows/`)
+
+2. **Replace placeholders** in `CLAUDE.md`:
+   - `{{PROJECT_NAME}}` → from `package.json`, `pyproject.toml`, or directory name
+   - `{{PROJECT_DESCRIPTION}}` → ask the user briefly if unclear
+   - `{{STACK}}` → detected from above
+   - `{{REPO_LAYOUT}}` → tree of top-level directories with one-line description each
+   - `{{CONSTRAINTS}}` → ask the user 3-4 questions about product-specific constraints (auth provider? notification channels? compliance? performance budgets? browser support?)
+
+3. **Confirm spec extensions enabled**. Look at `specs/templates/feature.spec.md`:
+   - Check the comment near the top: `<!-- Extensions enabled: ... -->` (added by `claude-sdd init`)
+   - If MISSING extensions that obviously apply to this project (e.g. project clearly uses a DB but `persistent-data` not enabled), suggest the user enable them by re-running `claude-sdd init --skill-only --extensions <list>` or by manually appending the relevant `specs/templates/extensions/<id>.md` content
+   - If extensions are enabled that DON'T apply (rare — usually user enables intentionally), no action
+
+4. If applicable, generate the first `docs/adr/0001-<area>.md` placeholder with the project context as a starting ADR
+
+After this one-time setup, proceed with normal SDD flow below.
+
+---
+
+## Step 1: classify the mode
+
+Apply this decision tree:
+
+```
+Does the change touch user-observable behavior?
+├─ NO (typo, lint, comment, dep bump, config doc, file rename without ref change)
+│  → SHORT-CIRCUIT
+│
+└─ YES
+   ├─ Is it a bug fix with clear test failure or module with existing tests?
+   │  → FAST
+   │
+   └─ It's feature/refactor/schema/integration/auth boundary
+      → FULL
+```
+
+**If you doubt between FAST and FULL: choose FULL.** The overhead of full spec (~30 min) is much less than the cost of discovering gaps in post-merge review.
+
+**If you doubt between SHORT-CIRCUIT and FAST: choose FAST.** If you are going to touch behavior, the minimal spec is worth it.
+
+### Classified examples
+
+| Task | Mode | Reason |
+|---|---|---|
+| "Fix typo in pricing page" | SHORT-CIRCUIT | Just a string, no behavior |
+| "Bump httpx 0.27 → 0.28" | SHORT-CIRCUIT | Dependency, no API change |
+| "Reset password rejects expired tokens with message X" | FAST | Bug, tested module |
+| "Implement installment payments via Stripe" | FULL | Feature, external integration, billing |
+| "Migrate to new schema for users" | FULL | Schema change, multi-tenant if applicable, legacy data |
+| "Add notes field to entity X" | FULL | Schema change |
+| "Refactor notification_service to support push" | FULL | Behavior change + new integration |
+| "Rename `getUsers` → `listUsers`" | SHORT-CIRCUIT | No behavior |
+
+---
+
+## Step 2: read critical context
+
+Regardless of mode, read BEFORE touching code:
+
+1. **`CLAUDE.md`** — SDD philosophy, escape hatches, repo map, project constraints
+2. **ADRs in `docs/adr/`** if your change touches active architectural patterns
+3. **Existing specs** in `specs/features/<area>/` of the affected area (consistency, no-duplication)
+4. **`TASKS.md`** if there is an associated ticket
+
+For FULL/FAST: also read
+5. **`SPEC_PIPELINE.md`** for the detail of each step
+
+---
+
+## Step 3: execute the corresponding pipeline
+
+### FULL pipeline
+
+```
+1. SPEC      → use specs/prompts/spec-generator.md, output to specs/features/<area>/<slug>.spec.md
+2. REVIEW    → use specs/prompts/spec-reviewer.md, edit the same spec with Review notes section
+3. TESTS     → use specs/prompts/test-generator.md, respect Selective TDD
+4. IMPLEMENT → use specs/prompts/implementation.md, respect project architecture
+5. VERIFY    → use superpowers:verification-before-completion
+```
+
+For complex tasks (>1 day estimated, multi-file): invoke `superpowers:writing-plans` BEFORE Step 1. The resulting plan feeds the spec.
+
+### FAST pipeline
+
+```
+1. SPEC minimal → only Context + Validation Rules + Edge Cases + Errors + Tests strategy. Output to specs/features/<area>/<slug>.spec.md anyway
+2. TESTS        → failing-test-first if it's a bug, test-first if new validation
+3. IMPLEMENT    → respect architecture and ADRs
+4. VERIFY       → tests + lint + CI green
+```
+
+Skip formal review — review happens in commit message.
+
+### SHORT-CIRCUIT pipeline
+
+```
+1. IMPLEMENT direct
+2. VERIFY: existing tests pass + lint clean + CI green
+```
+
+Skip everything else. DO NOT write spec — would be noise.
+
+---
+
+## Step 4: applicable skills
+
+Identify and use relevant skills based on the area of change:
+
+| Your change touches... | Use skill |
+|---|---|
+| Project-specific patterns | Look for skills in `.claude/skills/` of your project |
+| Bug debugging | `superpowers:systematic-debugging` |
+| TDD enforcement | `superpowers:test-driven-development` |
+| Verification at the end | `superpowers:verification-before-completion` |
+| Brainstorming requirements | `superpowers:brainstorming` |
+| Multi-step plan | `superpowers:writing-plans` |
+
+---
+
+## Step 5: output format
+
+### FULL/FAST
+
+Your response when you complete the task follows this order:
+
+```
+## 1. SPEC
+Path: specs/features/<area>/<slug>.spec.md
+[link or summary of the spec]
+
+## 2. SPEC REVIEW (FULL only)
+Issues found, decisions taken
+
+## 3. TEST CASES
+List of tests written, with paths
+
+## 4. IMPLEMENTATION
+Summary of changes + paths of modified files
+
+## 5. VERIFICATION
+- Tests: <result>
+- Lint: <result>
+- CI: <link to run>
+- Smoke (if applicable): <description>
+```
+
+### SHORT-CIRCUIT
+
+Only:
+```
+## CHANGE
+Diff summary + paths
+
+## VERIFICATION
+- Existing tests pass
+- Lint clean
+- CI: <link>
+```
+
+---
+
+## Hard rules
+
+- **Do not start implementing without classifying the mode**. Five minutes thinking the mode saves hours of reverting.
+- **Do not write spec for SHORT-CIRCUIT**. It's noise and kills the discipline.
+- **Do not skip VERIFY in any mode**. Even for SHORT-CIRCUIT, existing tests must pass.
+- **If you find drift between spec and code during implementation**: update spec in the same commit. Drift without documenting is how SDD breaks silently.
+- **If you doubt the mode, ask the user what they prefer**. A 30-second question vs 30 min of overhead.
+
+---
+
+## How to invoke downstream pipeline
+
+When you've decided the mode, do not implement directly: invoke the corresponding prompt:
+
+- For **SPEC**: read `specs/prompts/spec-generator.md` and apply
+- For **REVIEW**: read `specs/prompts/spec-reviewer.md` and apply
+- For **TESTS**: read `specs/prompts/test-generator.md` and apply
+- For **IMPLEMENT**: read `specs/prompts/implementation.md` and apply
+- For **VERIFY**: invoke skill `superpowers:verification-before-completion`
+
+The prompt of each step has the project context already embedded after first-time setup, you don't need to re-explain it.
