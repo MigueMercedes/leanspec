@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-`claude-sdd` is a tiny Node CLI (`npx github:MigueMercedes/claude-sdd init`) that scaffolds the **Pragmatic SDD** framework into another project. It writes ~15 markdown files plus a Claude Code skill at `.claude/skills/sdd/SKILL.md`. The CLI itself is inert glue — the active intelligence ships as the skill (`templates/.claude/skills/sdd/SKILL.md`), which is what gets iterated on most.
+`claude-sdd` is a tiny Node CLI (`npx github:MigueMercedes/claude-sdd init`) that scaffolds the **Pragmatic SDD** framework into another project. It writes a set of markdown templates plus a Claude Code skill at `.claude/skills/sdd/SKILL.md`. The CLI itself is inert glue — the active intelligence ships as the skill (`templates/.claude/skills/sdd/SKILL.md`), which is what gets iterated on most.
 
 Distinguish two things when working here:
 
@@ -60,10 +60,12 @@ When adding a new extension, **5 places must change** (also documented in README
 
 ### CLI surface (`bin/cli.js`)
 
-Single `init` command. Three operation modes:
-- Interactive (default): asks 5 questions via `prompts`.
+Single `init` command. Three branches in the answer-gathering logic:
 - `--yes` / `--skill-only`: non-interactive; flags supply the answers.
-- CLI flags (e.g. `--extensions`) override interactive answers when both are given.
+- Auto-detected existing project (default when the cwd has a manifest or `.git/`): one confirmation prompt; stack and extensions deferred to the `sdd` skill on first invocation.
+- Interactive: 5 questions via `prompts` for empty directories, or whenever `--ask` is passed.
+
+CLI flags (e.g. `--extensions`) override prompted answers when both are given.
 
 `--skill-only` restricts the install to `.claude/skills/sdd/`. This is the documented update path while pre-1.0 (there is intentionally no `update` command — see README "Why we don't bundle a `update` command").
 
