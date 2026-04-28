@@ -3,8 +3,8 @@
 import { Command } from 'commander';
 import kleur from 'kleur';
 import { createRequire } from 'node:module';
-import { askInteractive } from '../lib/prompts.js';
-import { installTemplates, appendGitignore, reportFile, EXTENSIONS, isValidExtensionId } from '../lib/install.js';
+import { askInteractive, askConfirmInstall } from '../lib/prompts.js';
+import { installTemplates, appendGitignore, reportFile, EXTENSIONS, isExistingProject, isValidExtensionId } from '../lib/install.js';
 
 const require = createRequire(import.meta.url);
 const pkg = require('../package.json');
@@ -80,11 +80,29 @@ program
     }
 
     let answers;
+
     if (opts.yes || opts.skillOnly) {
       const projectName = opts.projectName || cwd.split('/').pop() || 'my-project';
       answers = {
         projectName,
         stack: opts.stack,
+        extensions: parsedExtensions,
+        addToGitignore: opts.gitignore !== false,
+        onConflict: /** @type {'overwrite'|'skip'} */ (opts.overwrite ? 'overwrite' : 'skip'),
+      };
+      // `opts.ask` is declared in Task 4; undefined here is falsy, so the
+      // auto-detect branch correctly skips when the user passes --ask later.
+    } else if (!opts.ask && (await isExistingProject(cwd))) {
+      console.log(kleur.dim('Detected existing project — deferring stack/extension detection to the `sdd` skill.'));
+      const proceed = await askConfirmInstall({ cwd });
+      if (!proceed) {
+        console.log(kleur.red('Cancelled.'));
+        process.exit(1);
+      }
+      const projectName = opts.projectName || cwd.split('/').pop() || 'my-project';
+      answers = {
+        projectName,
+        stack: opts.stack, // 'other' by default; skill will refine
         extensions: parsedExtensions,
         addToGitignore: opts.gitignore !== false,
         onConflict: /** @type {'overwrite'|'skip'} */ (opts.overwrite ? 'overwrite' : 'skip'),
@@ -96,7 +114,6 @@ program
         process.exit(1);
       }
       answers = interactive;
-      // CLI flag override wins if also provided
       if (parsedExtensions.length) answers.extensions = parsedExtensions;
     }
 
