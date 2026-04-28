@@ -66,7 +66,7 @@ In your project root:
 npx github:MigueMercedes/claude-sdd init
 ```
 
-If you run `init` inside an existing project (manifest or `.git/` detected), the CLI skips the questions and only asks for one confirmation — stack and extensions are detected by the `sdd` skill on first invocation. In an empty directory the original 5-question flow runs. Use `--ask` to force the interactive flow regardless of detection. Either way, the CLI writes ~15 files and **existing files are never overwritten by default.**
+If you run `init` inside an existing project (manifest or `.git/` detected), the CLI skips the questions and only asks for one confirmation — stack and extensions are detected by the `sdd` skill on first invocation. In an empty directory the original 5-question flow runs. Use `--ask` to force the interactive flow regardless of detection. Either way, **existing files are never overwritten by default.**
 
 Then open Claude Code in the same directory:
 
