@@ -41,7 +41,7 @@ describe('installTemplates', () => {
       'specs/features/README.md',
       'specs/features/.gitkeep',
       'docs/adr/0000-template.md',
-      'docs/runbooks/.gitkeep',
+      'docs/runbooks/README.md',
       '.claude/skills/sdd/SKILL.md',
     ];
 
