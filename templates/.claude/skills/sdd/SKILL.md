@@ -44,7 +44,7 @@ If the project's `CLAUDE.md` has unresolved `{{PLACEHOLDERS}}` (recently scaffol
    |---|---|
    | `multi-tenant` | Code or schemas reference `tenant_id`, `business_id`, `account_id`, `workspace_id`, or `org_id` as a foreign key / scope. |
    | `persistent-data` | Repo has `migrations/`, `alembic/`, `prisma/`, `drizzle/`, `schema.sql`, or an ORM dependency (sequelize, typeorm, prisma, sqlalchemy, alembic, gorm, diesel). |
-   | `production-rollout` | Code references feature flags (`launchdarkly`, `growthbook`, `unleash`, env-var gated `FEATURE_*`). |
+   | `production-rollout` | Code references feature flags or environment-gated branching: dedicated SDKs (`launchdarkly`, `growthbook`, `unleash`, `posthog`, `flagsmith`), env-var gated `FEATURE_*`, or paired runtime modes that suggest staged rollout (e.g. an `environment` flag with values like `demo`/`real` or `sandbox`/`production`, plus a `dryRun` / `DRY_RUN` toggle used to gate writes). `dryRun` alone is not enough — there must also be an environment / mode distinction the code branches on. |
    | `operational` | Project has `Dockerfile` + observability deps (datadog, sentry, opentelemetry, prom_client) or a `runbooks/` directory. |
    | `external-deps` | Code calls third-party APIs (stripe, paddle, twilio, sendgrid) or has webhook handlers. |
    | `public-api` | Project is a library (no top-level app entry, has `main`/`exports` in `package.json`, or publishes to npm/PyPI). |
