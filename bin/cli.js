@@ -29,9 +29,10 @@ function printNextSteps(repoUrl) {
   console.log('');
   console.log(kleur.bold('Next steps:'));
   console.log('  1. Open Claude Code in this directory');
-  console.log('  2. Invoke the skill: ' + kleur.cyan('/sdd'));
-  console.log('  3. The skill will read your codebase and customize CLAUDE.md');
+  console.log('  2. Invoke ' + kleur.cyan('/sdd-init') + ' once — customizes CLAUDE.md by reading your codebase');
+  console.log('  3. Use ' + kleur.cyan('/sdd') + ' from then on for any task that touches code');
   console.log('');
+  console.log(kleur.dim('Tip: re-invoke /sdd-init later if your stack drifts or CLAUDE.md feels stale.'));
   console.log(kleur.dim('Docs: ' + repoUrl));
   console.log('');
 }
@@ -53,7 +54,7 @@ program
     '--extensions <list>',
     `Comma-separated extensions to enable. Valid: ${EXTENSIONS.map((e) => e.id).join(', ')}`
   )
-  .option('--skill-only', 'Only install the .claude/skills/sdd/ skill (no templates)', false)
+  .option('--skill-only', 'Only install the .claude/skills/ directory (sdd + sdd-init), no other templates', false)
   .option('--ask', 'Force the interactive prompts even when an existing project is detected', false)
   .option('--overwrite', 'Overwrite existing files instead of skipping', false)
   .option('--no-gitignore', 'Do not modify .gitignore')

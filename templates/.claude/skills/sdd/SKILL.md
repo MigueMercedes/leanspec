@@ -1,11 +1,11 @@
 ---
 name: sdd
-description: Pragmatic Spec-Driven Development pipeline. Invoke ALWAYS when receiving a task that touches code in this project before planning or implementing. Decides mode (FULL/FAST/SHORT-CIRCUIT) based on heuristics, loads the project SDD context, and directs to the corresponding pipeline. First invocation in a project also customizes the scaffolded CLAUDE.md template based on the actual codebase.
+description: Pragmatic Spec-Driven Development pipeline. Invoke ALWAYS when receiving a task that touches code in this project before planning or implementing. Decides mode (FULL/FAST/SHORT-CIRCUIT) based on heuristics, loads the project SDD context, and directs to the corresponding pipeline.
 ---
 
 # Pragmatic SDD
 
-This skill is the entry point of the SDD flow. Invoke it when starting any non-trivial task. It guides you to decide the mode of work, what docs to read, and when to write specs vs when not.
+This skill is the entry point of the SDD flow for individual tasks. Invoke it when starting any non-trivial task. It guides you to decide the mode of work, what docs to read, and when to write specs vs when not.
 
 ## When to invoke
 
@@ -18,47 +18,13 @@ This skill is the entry point of the SDD flow. Invoke it when starting any non-t
 
 ---
 
-## First-time setup (if CLAUDE.md still has placeholders)
+## Pre-check: is the project context set up?
 
-If the project's `CLAUDE.md` has unresolved `{{PLACEHOLDERS}}` (recently scaffolded by `claude-sdd`), the FIRST thing to do is customize it:
+Before classifying any task, glance at `CLAUDE.md`. If it still contains literal `{{PLACEHOLDER}}` strings (e.g. `{{PROJECT_DESCRIPTION}}`, `{{REPO_LAYOUT}}`, `{{CONSTRAINTS}}`), the project was recently scaffolded by `claude-sdd init` but the per-project context was never filled in. Tell the user:
 
-1. **Read the codebase** to detect:
-   - Primary language(s) and framework(s) (look for `package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`, etc.)
-   - Repo layout (monorepo, single-repo, multi-repo with submodules)
-   - Test framework (look for `vitest.config`, `pytest.ini`, `jest.config`, etc.)
-   - Linter / formatter
-   - Deploy target (look for `Dockerfile`, `vercel.json`, `railway.toml`, `.github/workflows/`)
+> Your `CLAUDE.md` still has unresolved placeholders. Run `/sdd-init` first to customize it for this project — I can pick up the task right after.
 
-2. **Replace placeholders** in `CLAUDE.md`:
-   - `{{PROJECT_NAME}}` → from `package.json`, `pyproject.toml`, or directory name
-   - `{{PROJECT_DESCRIPTION}}` → ask the user briefly if unclear
-   - `{{STACK}}` → detected from above
-   - `{{REPO_LAYOUT}}` → tree of top-level directories with one-line description each
-   - `{{CONSTRAINTS}}` → ask the user 3-4 questions about product-specific constraints (auth provider? notification channels? compliance? performance budgets? browser support?)
-
-3. **Detect & propose extensions.** Look at `specs/templates/feature.spec.md`:
-   - Check the `<!-- Extensions enabled: ... -->` comment near the top, if any.
-   - Run the heuristics below against the codebase. For each extension whose heuristic matches, propose it to the user.
-
-   | Extension | Heuristic — propose if any are true |
-   |---|---|
-   | `multi-tenant` | Code or schemas reference `tenant_id`, `business_id`, `account_id`, `workspace_id`, or `org_id` as a foreign key / scope. |
-   | `persistent-data` | Repo has `migrations/`, `alembic/`, `prisma/`, `drizzle/`, `schema.sql`, or an ORM dependency (sequelize, typeorm, prisma, sqlalchemy, alembic, gorm, diesel). |
-   | `production-rollout` | Code references feature flags or environment-gated branching: dedicated SDKs (`launchdarkly`, `growthbook`, `unleash`, `posthog`, `flagsmith`), env-var gated `FEATURE_*`, or paired runtime modes that suggest staged rollout (e.g. an `environment` flag with values like `demo`/`real` or `sandbox`/`production`, plus a `dryRun` / `DRY_RUN` toggle used to gate writes). `dryRun` alone is not enough — there must also be an environment / mode distinction the code branches on. |
-   | `operational` | Project has `Dockerfile` + observability deps (datadog, sentry, opentelemetry, prom_client) or a `runbooks/` directory. |
-   | `external-deps` | Code calls third-party APIs (stripe, paddle, twilio, sendgrid) or has webhook handlers. |
-   | `public-api` | Project is a library (no top-level app entry, has `main`/`exports` in `package.json`, or publishes to npm/PyPI). |
-
-   - Show the user the proposed list with one-line rationale per match: "Propose `persistent-data` because alembic/ exists." Ask which to enable. Default = all matches.
-   - For each confirmed extension, read the fragment at `specs/templates/extensions/<id>.md` and inject it into `specs/templates/feature.spec.md`. The merge:
-     - **Removes** the `## Optional sections (extensions)` heading and the placeholder bullets directly under it (everything from that heading up to the next `##` heading) — these are a hint for empty installs and become noise once real fragments land.
-     - Inserts the fragments in their place (concatenated, separated by blank lines).
-     - Updates the `<!-- Extensions enabled: ... -->` comment near the top if it exists, or adds one immediately after the `> **Mode**: ...` header line if not.
-   - If no extensions match, say so and skip — `feature.spec.md` stays lean.
-
-4. If applicable, generate the first `docs/adr/0001-<area>.md` placeholder with the project context as a starting ADR
-
-After this one-time setup, proceed with normal SDD flow below.
+The `sdd-init` skill handles first-time setup (and later refreshes). Don't try to do that work from inside `sdd` — keep this skill focused on task orchestration.
 
 ---
 
@@ -225,4 +191,4 @@ When you've decided the mode, do not implement directly: invoke the correspondin
 - For **IMPLEMENT**: read `specs/prompts/implementation.md` and apply
 - For **VERIFY**: invoke skill `superpowers:verification-before-completion`
 
-The prompt of each step has the project context already embedded after first-time setup, you don't need to re-explain it.
+The prompt of each step has the project context already embedded (set by `/sdd-init`), you don't need to re-explain it.
