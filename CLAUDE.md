@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this repo is
 
-`claude-sdd` is a tiny Node CLI (`npx github:MigueMercedes/claude-sdd init`) that scaffolds the **Pragmatic SDD** framework into another project. It writes a set of markdown templates plus a Claude Code skill at `.claude/skills/sdd/SKILL.md`. The CLI itself is inert glue — the active intelligence ships as the skill (`templates/.claude/skills/sdd/SKILL.md`), which is what gets iterated on most.
+`claude-sdd` is a tiny Node CLI (`npx github:MigueMercedes/claude-sdd init`) that scaffolds the **Pragmatic SDD** framework into another project. It writes a set of markdown templates plus two Claude Code skills under `.claude/skills/`: `sdd-init` (project context customization + refresh) and `sdd` (per-task pipeline). The CLI itself is inert glue — the active intelligence ships as those two skills, which are what get iterated on most.
 
 Distinguish two things when working here:
 
@@ -35,8 +35,8 @@ There is no lint or build step. The package ships as ESM source (`"type": "modul
 `installTemplates()` is the heart. It:
 
 1. Recursively walks `templates/` to enumerate files.
-2. **Filters out** source-only files (`.gitignore.additions` — consumed by `appendGitignore()` instead). Everything else under `templates/` is copied to the destination, including individual extension fragments — the `sdd` skill reads them on first invocation to merge the relevant ones into `feature.spec.md`.
-3. Reads each remaining file, runs `applyPlaceholders()` (`{{NAME}}` substitution; unknown placeholders are intentionally left untouched so the `sdd` skill can resolve them on first invocation).
+2. **Filters out** source-only files (`.gitignore.additions` — consumed by `appendGitignore()` instead). Everything else under `templates/` is copied to the destination, including individual extension fragments — the `sdd-init` skill reads them on first invocation to merge the relevant ones into `feature.spec.md`.
+3. Reads each remaining file, runs `applyPlaceholders()` (`{{NAME}}` substitution; unknown placeholders are intentionally left untouched so `sdd-init` can resolve them on first invocation).
 4. Special cases:
    - `README.md.tmpl` → renamed to `README.md` at destination.
    - `specs/templates/feature.spec.md` → if extensions are selected, the `## Optional sections (extensions)` placeholder block is replaced with the concatenated fragments, preserving the `## Review notes` section at the bottom (the merge logic locates the next `## Review notes` heading and slices around it).
@@ -62,12 +62,12 @@ When adding a new extension, **5 places must change** (also documented in README
 
 Single `init` command. Three branches in the answer-gathering logic:
 - `--yes` / `--skill-only`: non-interactive; flags supply the answers.
-- Auto-detected existing project (default when the cwd has a manifest or `.git/`): one confirmation prompt; stack and extensions deferred to the `sdd` skill on first invocation.
+- Auto-detected existing project (default when the cwd has a manifest or `.git/`): one confirmation prompt; stack and extensions deferred to `sdd-init` on first invocation.
 - Interactive: 5 questions via `prompts` for empty directories, or whenever `--ask` is passed.
 
 CLI flags (e.g. `--extensions`) override prompted answers when both are given.
 
-`--skill-only` restricts the install to `.claude/skills/sdd/`. This is the documented update path while pre-1.0 (there is intentionally no `update` command — see README "Why we don't bundle a `update` command").
+`--skill-only` restricts the install to `.claude/skills/` (both `sdd` and `sdd-init`). This is the documented update path while pre-1.0 (there is intentionally no `update` command — see README "Why we don't bundle a `update` command").
 
 ## Conventions specific to this repo
 
@@ -80,5 +80,5 @@ CLI flags (e.g. `--extensions`) override prompted answers when both are given.
 
 ## What lives where
 
-- The Pragmatic SDD philosophy (FULL/FAST/SHORT-CIRCUIT modes, Selective TDD, Spec-vs-ADR, extension catalog) is documented in **`README.md`** and reproduced in the templates that get installed (`templates/CLAUDE.md`, `templates/SPEC_PIPELINE.md`, `templates/.claude/skills/sdd/SKILL.md`). When the philosophy changes, those four places need to stay aligned.
+- The Pragmatic SDD philosophy (FULL/FAST/SHORT-CIRCUIT modes, Selective TDD, Spec-vs-ADR, extension catalog) is documented in **`README.md`** and reproduced in the templates that get installed (`templates/CLAUDE.md`, `templates/SPEC_PIPELINE.md`, `templates/.claude/skills/sdd/SKILL.md`, `templates/.claude/skills/sdd-init/SKILL.md`). When the philosophy changes, those five places need to stay aligned.
 - **This** `CLAUDE.md` is for working *on* the scaffolder, not *with* it. The SDD pipeline (specs, ADRs, etc.) is **not** applied to changes inside this repo — there is no `specs/` directory here, and code changes are reviewed conventionally via PR.

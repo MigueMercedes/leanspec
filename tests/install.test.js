@@ -43,6 +43,7 @@ describe('installTemplates', () => {
       'docs/adr/0000-template.md',
       'docs/runbooks/README.md',
       '.claude/skills/sdd/SKILL.md',
+      '.claude/skills/sdd-init/SKILL.md',
     ];
 
     for (const f of expectedFiles) {
@@ -90,14 +91,20 @@ describe('installTemplates', () => {
     expect(claudeMd).toContain('{{CONSTRAINTS}}');
   });
 
-  it('skipOnly mode only installs the sdd skill', async () => {
+  it('skipOnly mode installs all .claude/skills/ entries and nothing else', async () => {
     await installTemplates({ cwd: tmpDir, vars: VARS, skillOnly: true });
 
-    const skillExists = await fs
+    const sddExists = await fs
       .access(path.join(tmpDir, '.claude/skills/sdd/SKILL.md'))
       .then(() => true)
       .catch(() => false);
-    expect(skillExists).toBe(true);
+    expect(sddExists).toBe(true);
+
+    const sddInitExists = await fs
+      .access(path.join(tmpDir, '.claude/skills/sdd-init/SKILL.md'))
+      .then(() => true)
+      .catch(() => false);
+    expect(sddInitExists).toBe(true);
 
     const claudeExists = await fs
       .access(path.join(tmpDir, 'CLAUDE.md'))

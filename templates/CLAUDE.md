@@ -109,11 +109,12 @@ your codebase. Common constraints to document:
 
 ## Available Skills
 
-`claude-sdd` ships exactly one skill:
+`claude-sdd` ships two skills:
 
 | Skill | When to use |
 |---|---|
-| `sdd` | Entry point for any non-trivial task — decides FULL/FAST/SHORT-CIRCUIT mode |
+| `sdd-init` | Customizes this `CLAUDE.md` after install (replaces `{{PLACEHOLDERS}}`, proposes extensions, drafts the first ADR). Re-invoke later for a refresh — audits drift and bloat, proposes targeted edits. |
+| `sdd` | Entry point for any non-trivial task — decides FULL/FAST/SHORT-CIRCUIT mode and orchestrates the pipeline. |
 
 If you also have the [`superpowers`](https://github.com/obra/superpowers) plugin installed, these companion skills pair well with the SDD pipeline. **They are optional** — `sdd` works without them by handling each step inline.
 

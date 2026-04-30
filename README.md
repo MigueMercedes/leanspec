@@ -68,13 +68,13 @@ npx github:MigueMercedes/claude-sdd init
 
 If you run `init` inside an existing project (manifest or `.git/` detected), the CLI skips the questions and only asks for one confirmation — stack and extensions are detected by the `sdd` skill on first invocation. In an empty directory the original 5-question flow runs. Use `--ask` to force the interactive flow regardless of detection. Either way, **existing files are never overwritten by default.**
 
-Then open Claude Code in the same directory:
+Then open Claude Code in the same directory and invoke the setup skill:
 
 ```
-> /sdd
+> /sdd-init
 ```
 
-The skill reads your codebase, fills the placeholders in `CLAUDE.md` based on what it detects, and you're ready. From then on, every non-trivial task starts with `/sdd` to classify the work.
+`sdd-init` reads your codebase, fills the placeholders in `CLAUDE.md` (stack, repo layout, constraints), and proposes which extensions apply. From then on, every non-trivial task starts with `/sdd` to classify the work — it orchestrates the spec → tests → implement → verify pipeline. Re-invoke `/sdd-init` later if your stack drifts or `CLAUDE.md` feels stale.
 
 ## End-to-end walk-through
 
@@ -354,30 +354,43 @@ npx github:MigueMercedes/claude-sdd init --ask
 
 `node` · `python` · `rust` · `go` · `mixed` · `other`
 
-The stack value is informational — it shows up in `CLAUDE.md` as `**Stack**: <X>` and the `sdd` skill uses it as a hint for things like test runner conventions during first-time setup. It's not enforcing anything.
+The stack value is informational — it shows up in `CLAUDE.md` as `**Stack**: <X>` and `sdd-init` uses it as a hint for things like test runner conventions during the customization pass. It's not enforcing anything.
 
-## The `sdd` skill
+## The skills
 
-This is where the framework earns its keep. Templates are inert text; the skill is the active part.
+`claude-sdd` ships two skills with separate concerns:
 
-### What it does
+### `sdd-init` — project context (one-time + refresh)
 
-1. **First-time setup** (only on its first invocation in a project)
-   - Reads the codebase to detect language, framework, test runner, deploy target
-   - Replaces `{{PROJECT_NAME}}`, `{{STACK}}`, `{{REPO_LAYOUT}}`, `{{CONSTRAINTS}}` placeholders in `CLAUDE.md`
-   - Asks 3-4 questions about product-specific constraints (auth provider? notification channels? compliance?)
-   - Optionally generates the first ADR placeholder with project context
+Customizes the scaffolded `CLAUDE.md` so it actually describes your project.
 
-2. **Every subsequent invocation**
-   - Classifies the task: FULL / FAST / SHORT-CIRCUIT
-   - Loads the relevant context files (CLAUDE.md, ADRs, related specs)
-   - Walks through the corresponding pipeline
-   - Outputs in the standardized format (FINAL SPEC → REVIEW → TESTS → IMPL → VERIFY)
-   - At the end, invokes the verification skill if you have `superpowers:verification-before-completion` installed
+**Mode A — first-time setup** (run once after `claude-sdd init`):
+- Reads the codebase to detect language, framework, test runner, deploy target
+- Replaces `{{PROJECT_NAME}}`, `{{STACK}}`, `{{REPO_LAYOUT}}`, `{{CONSTRAINTS}}` placeholders in `CLAUDE.md`
+- Asks 3-4 questions about product-specific constraints (auth provider? notification channels? compliance?)
+- Detects which spec extensions apply via explicit heuristics and proposes them
+- Optionally generates the first ADR placeholder with project context
+
+**Mode B — refresh** (run anytime CLAUDE.md feels stale):
+- Detects technical drift: stack changed, new top-level directories, deps that materially changed constraints
+- Detects bloat: sections duplicating README, generic best-practice noise, content that belongs in ADRs/runbooks
+- Reports both, asks the user how to proceed (full improvement / drift-only / per-item review). Default is conservative — drift only.
+- Applies via targeted `Edit` calls, never wholesale rewrite. Always shows the diff.
+
+### `sdd` — task pipeline
+
+This is where the framework earns its keep at the per-task level.
+
+- Classifies the task: FULL / FAST / SHORT-CIRCUIT
+- Loads the relevant context files (CLAUDE.md, ADRs, related specs)
+- Walks through the corresponding pipeline
+- Outputs in the standardized format (FINAL SPEC → REVIEW → TESTS → IMPL → VERIFY)
+- At the end, invokes the verification skill if you have `superpowers:verification-before-completion` installed
+- If `sdd` sees unresolved `{{PLACEHOLDERS}}` in `CLAUDE.md`, it tells the user to run `/sdd-init` first instead of trying to do that work itself.
 
 ### When NOT to invoke
 
-Pure conversational queries — "what does X do", "where does Y live", "explain this function". Use Read/Bash directly. The skill is for tasks that change code.
+Pure conversational queries — "what does X do", "where does Y live", "explain this function". Use Read/Bash directly. The skills are for tasks that change code (`sdd`) or change project context (`sdd-init`).
 
 ### Working alongside other skills
 
@@ -417,7 +430,7 @@ Yes — they're plain markdown files in `specs/prompts/` after install. Edit fre
 
 ### How do I update to a newer version?
 
-Re-run the `init` command and choose to overwrite the `.claude/skills/sdd/SKILL.md` file (and any other prompt/template you want updated). Your specs in `specs/features/` are never touched.
+Re-run the `init` command with `--skill-only --overwrite` to refresh both skills (`sdd` and `sdd-init`) without touching any other file. Your specs in `specs/features/` are never touched. With `--overwrite`, any file actually replaced is preserved as `<file>.bak` next to the new one.
 
 ```bash
 npx github:MigueMercedes/claude-sdd init --skill-only --overwrite
@@ -451,10 +464,10 @@ Override it in conversation: "Treat this as FULL even though you classified it a
 Skills under `.claude/skills/<name>/SKILL.md` are auto-discovered. Verify:
 
 ```bash
-ls -la .claude/skills/sdd/SKILL.md
+ls -la .claude/skills/sdd/SKILL.md .claude/skills/sdd-init/SKILL.md
 ```
 
-If missing: re-run `npx github:MigueMercedes/claude-sdd init --skill-only`.
+If either is missing: re-run `npx github:MigueMercedes/claude-sdd init --skill-only`.
 
 If present but Claude Code doesn't show it: restart your Claude Code session. Skills are loaded at session start.
 
@@ -471,7 +484,7 @@ If you're on Node <18, upgrade. The package requires Node 18+.
 
 ### My `CLAUDE.md` still has `{{PLACEHOLDERS}}` after running the skill
 
-The skill only resolves placeholders during its first invocation in a project. If it failed midway (e.g. you cancelled), invoke it again. To force a fresh setup, delete the `CLAUDE.md` and run `init` again to get a new template.
+You probably ran `/sdd` instead of `/sdd-init`. `/sdd` is for tasks; `/sdd-init` is what fills the placeholders. Run `/sdd-init` once. If `sdd-init` failed midway (e.g. you cancelled), invoke it again — it's idempotent.
 
 ### The skill keeps suggesting FULL mode for tiny changes
 
@@ -489,7 +502,7 @@ If you want CI to pass before integrating, run `--skill-only` and integrate the 
 
 ### I want to remove claude-sdd
 
-Delete the files: `CLAUDE.md`, `SPEC_PIPELINE.md`, `specs/`, `docs/adr/`, `.claude/skills/sdd/`. There's no install registry to clean — the package only writes files, doesn't add dependencies to your project's `package.json`.
+Delete the files: `CLAUDE.md`, `SPEC_PIPELINE.md`, `specs/`, `docs/adr/`, `docs/runbooks/`, `.claude/skills/sdd/`, `.claude/skills/sdd-init/`. There's no install registry to clean — the package only writes files, doesn't add dependencies to your project's `package.json`.
 
 ## Comparison to alternatives
 

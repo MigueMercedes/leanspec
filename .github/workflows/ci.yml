@@ -28,6 +28,7 @@ jobs:
           test -f CLAUDE.md
           test -f SPEC_PIPELINE.md
           test -f .claude/skills/sdd/SKILL.md
+          test -f .claude/skills/sdd-init/SKILL.md
           test -f specs/templates/extensions/README.md
           test ! -f .gitignore.additions
           test -f specs/templates/extensions/multi-tenant.md
